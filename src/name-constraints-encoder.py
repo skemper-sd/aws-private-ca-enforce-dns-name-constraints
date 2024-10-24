@@ -6,7 +6,7 @@ import argparse
 import json
 import logging
 
-from cryptography.x509 import NameConstraints, DNSName
+from cryptography.x509 import NameConstraints, DNSName, UniformResourceIdentifier
 
 
 def main():
@@ -27,42 +27,63 @@ def main():
     # Adding Arguments
     parser.add_argument(
         "-p",
-        "--Permitted",
+        "--DnsPermitted",
         help="Permitted Subtree List (e.g. .test.example.com,.dev.example.com). "
              + "Do not include spaces in the subtree list.",
     )
 
     parser.add_argument(
         "-e",
-        "--Excluded",
+        "--DnsExcluded",
         help="Excluded Subtree List (e.g. .prod.dev.example.com,.production.dev.example.com). "
              + "Any name matching a restriction in the excludedSubtrees field is "
              + "invalid regardless of information appearing in the permittedSubtrees. "
              + "Do not include spaces in the subtree list.",
     )
 
+    parser.add_argument(
+        "-u",
+        "--UriPermitted"
+    )
+
+    parser.add_argument(
+        "-v",
+        "--UriExcluded"
+    )
+
     # Read arguments from command line
     args = parser.parse_args()
 
-    permitted_subtrees = []
+    permitted_subtrees = None
     excluded_subtrees = None
 
-    if (not args.Permitted) and (not args.Excluded):
+    if (not args.DnsPermitted) and (not args.DnsExcluded) and (not args.UriPermitted) and (not args.UriExcluded):
         raise ValueError(
             "You didn't provide any permitted or excluded name constraints in your arguments.\r\n"
             + "Run this script again with at least one permitted or excluded subtree argument.",
         )
 
     # Permitted Subtrees
-    if args.Permitted:
-        for permit in args.Permitted.split(","):
+    if args.DnsPermitted:
+        permitted_subtrees = [] if permitted_subtrees is None else permitted_subtrees
+        for permit in args.DnsPermitted.split(","):
             permitted_subtrees.append(DNSName(permit))
 
     # Excluded Subtrees will override Permitted Subtrees
-    if args.Excluded:
-        excluded_subtrees = []
-        for exclude in args.Excluded.split(","):
+    if args.DnsExcluded:
+        excluded_subtrees = [] if excluded_subtrees is None else permitted_subtrees
+        for exclude in args.DnsExcluded.split(","):
             excluded_subtrees.append(DNSName(exclude))
+
+    if args.UriPermitted:
+        permitted_subtrees = [] if permitted_subtrees is None else permitted_subtrees
+        for permit in args.UriPermitted.split(","):
+            permitted_subtrees.append(UniformResourceIdentifier(permit))
+
+    if args.UriExcluded:
+        excluded_subtrees = [] if excluded_subtrees is None else permitted_subtrees
+        for exclude in args.UriExcluded.split(","):
+            excluded_subtrees.append(UniformResourceIdentifier(exclude))
 
     logging.info(f"Permitted Subtrees: {permitted_subtrees}")
     logging.info(f"Excluded Subtrees: {excluded_subtrees}")
